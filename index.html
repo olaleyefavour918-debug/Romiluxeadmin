@@ -209,58 +209,6 @@ function requestNotificationPermission(){
   }
 }
 
-// ---- Push notifications that work even when this admin page/browser is closed ----
-// This is a separate, stronger layer on top of the in-tab sound/notification above:
-// it registers a background service worker and subscribes this device to receive
-// push messages sent from the server whenever a brand new order comes in — the
-// message reaches this device even if nobody currently has the admin page open.
-const VAPID_PUBLIC_KEY="BO3p5DQHq62Qhxnj8XP6IjNkX4AO84wF464HuVwr_TguuytUAF_IaYgirbPjzzVGUEHBq0e8I311x_kskpZkZz8";
-
-function urlBase64ToUint8Array(base64String){
-  const padding="=".repeat((4-base64String.length%4)%4);
-  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
-  const rawData=atob(base64);
-  const outputArray=new Uint8Array(rawData.length);
-  for(let i=0;i<rawData.length;++i)outputArray[i]=rawData.charCodeAt(i);
-  return outputArray;
-}
-
-async function setupPushNotifications(){
-  if(!("serviceWorker" in navigator)||!("PushManager" in window)){
-    console.log("Push notifications aren't supported in this browser.");
-    return;
-  }
-  try{
-    const reg=await navigator.serviceWorker.register("./sw.js",{scope:"./"});
-    const permission=await Notification.requestPermission();
-    if(permission!=="granted")return;
-    let sub=await reg.pushManager.getSubscription();
-    if(!sub){
-      sub=await reg.pushManager.subscribe({
-        userVisibleOnly:true,
-        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-    }
-    const subJson=sub.toJSON();
-    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`,{
-      method:"POST",
-      headers:{
-        "apikey":SUPABASE_ANON_KEY,
-        "Authorization":"Bearer "+SUPABASE_ANON_KEY,
-        "Content-Type":"application/json",
-        "Prefer":"resolution=merge-duplicates"
-      },
-      body:JSON.stringify({
-        endpoint:subJson.endpoint,
-        p256dh:subJson.keys.p256dh,
-        auth:subJson.keys.auth
-      })
-    });
-  }catch(e){
-    console.error("Push notification setup failed:",e);
-  }
-}
-
 function playNewOrderChime(){
   try{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -302,7 +250,6 @@ function startOrderWatcher(){
   if(orderWatcherStarted)return; // avoid starting it twice across login/session-restore paths
   orderWatcherStarted=true;
   requestNotificationPermission();
-  setupPushNotifications(); // registers the service worker so notifications work even when this tab/browser is closed
   setInterval(()=>{loadOrders(true)},30000); // check every 30 seconds while this tab is open
 }
 
@@ -949,7 +896,10 @@ async function loadBin(){
           <div class="pname">${p.name}</div>
           <div class="pmeta">${categoryLabel(p.category)} · ₦${Number(p.price).toLocaleString("en-NG")}/${p.unit}</div>
         </div>
-        <button class="restore-btn" onclick="restoreProduct(${p.id},this)">Restore</button>
+        <div class="product-actions">
+          <button class="restore-btn" onclick="restoreProduct(${p.id},this)">Restore</button>
+          <button class="del-btn" onclick="deleteProductForever(${p.id},this)">Delete Forever</button>
+        </div>
       </div>
     `).join("");
   }catch(e){
@@ -972,6 +922,22 @@ async function restoreProduct(id,btn){
     btn.disabled=false;btn.textContent="Restore";
   }
 }
+async function deleteProductForever(id,btn){
+  if(!confirm("Permanently delete this product? This cannot be undone — it will be gone for good, not just moved to the bin."))return;
+  btn.disabled=true;btn.textContent="Deleting…";
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`,{
+      method:"DELETE",
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Prefer":"return=minimal"}
+    });
+    if(!res.ok)throw new Error("Permanent delete failed ("+res.status+"): "+(await res.text().catch(()=>"")));
+    loadBin();
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;btn.textContent="Delete Forever";
+  }
+}
+
 </script>
 </body>
 </html>
