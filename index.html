@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Romiluxe Ng — Order Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+:root{--ink:#1a1611;--paper:#fdfbf7;--warm:#f7f1e6;--gold:#b8912f;--gold-light:#d4af37;--muted:#7a6f5f;--line:#e6ddc9;--white:#ffffff;--green:#2f7a3c;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;background:var(--warm);color:var(--ink);min-height:100vh;padding:20px}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:600;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+.login-box{max-width:360px;margin:80px auto;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:28px}
+.login-box h2{font-size:18px;margin-bottom:16px}
+input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:12px;background:var(--paper);color:var(--ink)}
+button{background:var(--ink);color:var(--paper);border:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5}
+.error{color:#c00;font-size:13px;margin-top:8px}
+.order-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.order-id{font-weight:700;font-size:15px}
+.order-date{font-size:12px;color:var(--muted)}
+.order-row{font-size:13px;margin-bottom:4px;color:var(--ink)}
+.order-row b{color:var(--muted);font-weight:600}.ordered-product{display:flex;align-items:center;gap:10px;margin:7px 0;padding:8px;background:var(--paper);border:1px solid var(--line);border-radius:9px;max-width:620px}.ordered-product-img{width:58px;height:58px;object-fit:cover;border-radius:7px;border:1px solid var(--line);display:block}.ordered-product-info{font-size:13px;line-height:1.45;word-break:break-word}
+.status-row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-Pending{background:#fdf3d8;color:#8a6d00}
+.badge-Approved{background:#e2f5e4;color:var(--green)}
+.badge-Shipped{background:#e3ecfb;color:#1a4fa0}
+.badge-Delivered{background:#e8e8e8;color:#333}
+.save-btn{padding:8px 14px;font-size:13px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap}
+.refresh-btn{background:var(--white);color:var(--ink);border:1px solid var(--line)}
+.proof-link{font-size:12px;color:var(--gold);text-decoration:underline}
+#ordersList{margin-top:10px}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab-btn{background:var(--white);color:var(--ink);border:1px solid var(--line);padding:9px 14px;border-radius:8px;font-size:12px}
+.tab-btn.active{background:var(--ink);color:var(--paper)}
+.tab-badge{display:inline-block;background:#c0392b;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px}
+.new-orders-banner{background:#fdf3d8;border:1px solid #e8c96a;color:#7a5f00;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.new-orders-banner button{background:transparent;color:#7a5f00;border:1px solid #e8c96a;padding:6px 12px;font-size:12px;font-weight:600}
+.form-box{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
+.form-box h3{font-size:15px;margin-bottom:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.field{margin-bottom:10px}
+.msg{font-size:13px;margin-top:8px}
+.msg.ok{color:var(--green)}
+.msg.err{color:#c00}
+.product-card2{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:center}
+.product-card2 img{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.product-card2 .pinfo{flex:1;min-width:0}
+.product-card2 .pname{font-size:13px;font-weight:600}
+.product-card2 .pmeta{font-size:12px;color:var(--muted)}
+.del-btn{background:#fdeceb;color:#c0392b;padding:8px 12px;font-size:12px}
+.restore-btn{background:#e2f5e4;color:var(--green);padding:8px 12px;font-size:12px}
+.edit-btn{background:var(--white);color:var(--ink);border:1px solid var(--line);padding:8px 12px;font-size:12px}
+.product-actions{display:flex;gap:6px;flex-shrink:0}
+#currentCoverPreview img{width:60px;height:60px;border-radius:8px;object-fit:cover;margin-bottom:8px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-box">
+  <h2>Romiluxe Ng — Admin</h2>
+  <input id="adminPassword" type="password" placeholder="Enter admin password">
+  <button onclick="checkPassword()" style="width:100%">Log In</button>
+  <p id="loginError" class="error"></p>
+</div>
+
+<div id="dashboard" class="wrap" style="display:none">
+  <div class="top-bar">
+    <div>
+      <h1>Romiluxe Ng — Admin</h1>
+      <p class="sub">Manage orders and products.</p>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshCurrentTab()">↻ Refresh</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabOrdersBtn" onclick="switchTab('orders')">Orders <span id="newOrderBadge" class="tab-badge" style="display:none"></span></button>
+    <button class="tab-btn" id="tabProductsBtn" onclick="switchTab('products')">Products</button>
+    <button class="tab-btn" id="tabBinBtn" onclick="switchTab('bin')">Recycle Bin</button>
+  </div>
+
+  <div id="ordersTab">
+    <div id="ordersList"></div>
+  </div>
+
+  <div id="productsTab" style="display:none">
+    <div class="form-box">
+      <h3 id="formTitle">Add a New Product</h3>
+      <div class="field">
+        <label>Category</label>
+        <select id="pCategory" onchange="toggleWholesaleFields()">
+          <option value="retail">Retail</option>
+          <option value="wholesale">Wholesale</option>
+          <option value="perfume">Perfume</option>
+          <option value="cosmetics">Cosmetics</option>
+        </select>
+      </div>
+      <div class="field"><label>Product Name</label><input id="pName" placeholder="e.g. Gold Chain Necklace"></div>
+      <div class="form-row">
+        <div class="field"><label id="priceLabel">Price (₦)</label><input id="pPrice" type="number" placeholder="1500"></div>
+        <div class="field"><label>Unit</label><input id="pUnit" placeholder="piece / pack / dozen"><p class="sub" id="unitHint" style="margin-top:4px"></p></div>
+      </div>
+      <div class="form-row" id="wholesaleFields" style="display:none">
+        <div class="field"><label>Minimum Order Qty</label><input id="pMoq" type="number" value="6" min="6" readonly><p class="sub" style="margin-top:4px">Wholesale MOQ is fixed at 6 pieces.</p></div>
+        <div class="field"><label>Contents description</label><input id="pContents" placeholder="e.g. 1 dozen = 12 pcs"></div>
+      </div>
+      <div class="field"><label>Description (optional)</label><textarea id="pDescription" rows="3" placeholder="A short description customers will see on the product page" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:12px;background:var(--paper);color:var(--ink);font-family:inherit"></textarea></div>
+
+      <div class="field">
+        <label>Available Sizes (optional)</label>
+        <input id="pSizes" placeholder="e.g. Small, Medium, Large">
+        <p class="sub" style="margin-top:4px;margin-bottom:0">Separate multiple sizes with commas.</p>
+      </div>
+
+      <div class="field" style="margin-top:14px">
+        <label>Colours or Designs (optional)</label>
+        <p class="sub" id="variantHelp" style="margin-bottom:8px"><b>Colour:</b> use this when the same product comes in different colours or scents.<br><b>Design:</b> use this when the product has different styles/designs.</p>
+        <div class="form-row" style="grid-template-columns:140px 1fr 1fr">
+          <select id="variantType" onchange="updateVariantMode()" style="margin-bottom:0">
+            <option value="color">Colour</option>
+            <option value="design">Design</option>
+          </select>
+          <input id="variantColorName" placeholder="Enter colour or design name">
+          <input id="variantColorImage" type="file" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <button type="button" id="addVariantBtn" onclick="addColorVariant()" style="width:100%;margin-top:8px;background:var(--white);color:var(--ink);border:1px solid var(--line)">+ Add Colour</button>
+        <div id="variantPreviewList" style="margin-top:10px"></div>
+      </div>
+
+      <div class="field" id="mixMatchSetting" style="margin-top:14px;display:none">
+        <label>Wholesale Mix & Match</label>
+        <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:pointer">
+          <input id="allowMixMatch" type="checkbox" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto">
+          <span><b>Allow Mix & Match for this product</b><br><span class="sub">Customers will see an Add to Cart button first. After opening the product, they can also use Mix & Match to combine designs with other enabled products at the same wholesale price.</span></span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top:14px">
+        <label>Cover Photo (used as the main product image)</label>
+        <div id="currentCoverPreview"></div>
+        <input id="pImage" type="file" accept="image/png,image/jpeg,image/webp" onchange="captureCoverSelection()">
+        <p class="sub" id="coverHint" style="margin-top:4px"></p>
+      </div>
+      <button id="addProductBtn" onclick="saveProduct()" style="width:100%">Add Product</button>
+      <button id="cancelEditBtn" onclick="cancelEdit()" style="width:100%;margin-top:8px;background:var(--white);color:var(--ink);border:1px solid var(--line);display:none">Cancel Edit</button>
+      <p id="productMsg" class="msg"></p>
+    </div>
+    <div id="productsList"></div>
+  </div>
+
+  <div id="binTab" style="display:none">
+    <p class="sub">Deleted products land here. Restore any of them back to the live site anytime.</p>
+    <div id="binList"></div>
+  </div>
+</div>
+
+<script>
+// Change this password to whatever you'd like your client to use.
+const ADMIN_PASSWORD="Romiluxe2026";
+const IMGBB_API_KEY="d6fe83ff09ec684077c5f82e9ceff764";
+
+const SUPABASE_URL="https://crrtunosemhnmiaquevn.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNycnR1bm9zZW1obm1pYXF1ZXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1OTA4MjUsImV4cCI6MjEwMzE2NjgyNX0.H22GBlIwpMM9k-3X1K_ufZ91k4DOA9LArmG8c4b_LE8";
+
+function checkPassword(){
+  const val=document.getElementById("adminPassword").value;
+  if(val===ADMIN_PASSWORD){
+    try{sessionStorage.setItem("romiluxe-admin","1")}catch(e){}
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("dashboard").style.display="block";
+    loadOrders();
+    startOrderWatcher();
+  }else{
+    document.getElementById("loginError").textContent="Incorrect password. Please try again.";
+  }
+}
+document.getElementById("adminPassword").addEventListener("keydown",e=>{if(e.key==="Enter")checkPassword()});
+
+(function checkSession(){
+  try{
+    if(sessionStorage.getItem("romiluxe-admin")==="1"){
+      document.getElementById("loginScreen").style.display="none";
+      document.getElementById("dashboard").style.display="block";
+      loadOrders();
+      startOrderWatcher();
+    }
+  }catch(e){}
+})();
+
+// ---- New-order live notifications ----
+// While this admin tab stays open, we quietly re-check for orders every 30 seconds.
+// If a genuinely new order shows up, we play a sound, pop a browser notification
+// (if allowed), and flash the tab title — so she doesn't have to keep tapping Refresh.
+const ORIGINAL_TITLE=document.title;
+let knownOrderIds=null; // null = we haven't loaded once yet, so nothing to compare against
+let orderWatcherStarted=false;
+
+function requestNotificationPermission(){
+  if(!("Notification" in window))return;
+  if(Notification.permission==="default"){
+    Notification.requestPermission();
+  }
+}
+
+// ---- Push notifications that work even when this admin page/browser is closed ----
+// This is a separate, stronger layer on top of the in-tab sound/notification above:
+// it registers a background service worker and subscribes this device to receive
+// push messages sent from the server whenever a brand new order comes in — the
+// message reaches this device even if nobody currently has the admin page open.
+const VAPID_PUBLIC_KEY="BO3p5DQHq62Qhxnj8XP6IjNkX4AO84wF464HuVwr_TguuytUAF_IaYgirbPjzzVGUEHBq0e8I311x_kskpZkZz8";
+
+function urlBase64ToUint8Array(base64String){
+  const padding="=".repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const rawData=atob(base64);
+  const outputArray=new Uint8Array(rawData.length);
+  for(let i=0;i<rawData.length;++i)outputArray[i]=rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function setupPushNotifications(){
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)){
+    console.log("Push notifications aren't supported in this browser.");
+    return;
+  }
+  try{
+    const reg=await navigator.serviceWorker.register("./sw.js",{scope:"./"});
+    const permission=await Notification.requestPermission();
+    if(permission!=="granted")return;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const subJson=sub.toJSON();
+    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`,{
+      method:"POST",
+      headers:{
+        "apikey":SUPABASE_ANON_KEY,
+        "Authorization":"Bearer "+SUPABASE_ANON_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"resolution=merge-duplicates"
+      },
+      body:JSON.stringify({
+        endpoint:subJson.endpoint,
+        p256dh:subJson.keys.p256dh,
+        auth:subJson.keys.auth
+      })
+    });
+  }catch(e){
+    console.error("Push notification setup failed:",e);
+  }
+}
+
+function playNewOrderChime(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const playTone=(freq,startTime,duration)=>{
+      const o=ctx.createOscillator();const g=ctx.createGain();
+      o.type="sine";o.frequency.value=freq;
+      g.gain.setValueAtTime(0.0001,startTime);
+      g.gain.exponentialRampToValueAtTime(0.2,startTime+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,startTime+duration);
+      o.connect(g);g.connect(ctx.destination);
+      o.start(startTime);o.stop(startTime+duration);
+    };
+    const now=ctx.currentTime;
+    playTone(880,now,0.18);
+    playTone(1174.66,now+0.16,0.22);
+  }catch(e){}
+}
+
+function notifyNewOrders(newOrders){
+  playNewOrderChime();
+  document.title="🔴 New order! — "+ORIGINAL_TITLE;
+  if("Notification" in window && Notification.permission==="granted"){
+    const first=newOrders[0];
+    try{
+      new Notification("New order received",{
+        body:newOrders.length>1
+          ?`${newOrders.length} new orders just came in`
+          :`${first.customer_name||"A customer"} — ${first.total||""}`
+      });
+    }catch(e){}
+  }
+}
+
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden)document.title=ORIGINAL_TITLE;
+});
+
+function startOrderWatcher(){
+  if(orderWatcherStarted)return; // avoid starting it twice across login/session-restore paths
+  orderWatcherStarted=true;
+  requestNotificationPermission();
+  setupPushNotifications(); // registers the service worker so notifications work even when this tab/browser is closed
+  setInterval(()=>{loadOrders(true)},30000); // check every 30 seconds while this tab is open
+}
+
+async function loadOrders(isBackgroundCheck){
+  const list=document.getElementById("ordersList");
+  if(!isBackgroundCheck)list.innerHTML=`<p class="empty">Loading orders…</p>`;
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`,{
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
+    });
+    const orders=await res.json();
+
+    // Detect genuinely new orders that have arrived since we started watching this session,
+    // so we can play a sound / show a notification without disturbing her current view
+    // on every quiet 30-second background check where nothing has changed.
+    const currentIds=new Set(orders.map(o=>o.id));
+    let hasNewSinceLastPoll=false;
+    if(knownOrderIds){
+      const arrived=orders.filter(o=>!knownOrderIds.has(o.id));
+      if(arrived.length){
+        hasNewSinceLastPoll=true;
+        notifyNewOrders(arrived);
+      }
+    }
+    knownOrderIds=currentIds;
+    if(isBackgroundCheck&&!hasNewSinceLastPoll)return; // nothing changed — leave her view untouched
+
+    if(!orders.length){
+      list.innerHTML=`<p class="empty">No orders yet. New orders will appear here automatically.</p>`;
+      updateNewOrderBadge(0);
+      return;
+    }
+
+    // Figure out how many orders are new since she last viewed this tab.
+    let lastSeen=null;
+    try{lastSeen=localStorage.getItem("romiluxe-admin-last-seen")}catch(e){}
+    if(!lastSeen){
+      // First time ever opening this tab on this device — nothing to compare against yet,
+      // so just start the clock now rather than flagging every existing order as "new".
+      try{localStorage.setItem("romiluxe-admin-last-seen",new Date().toISOString())}catch(e){}
+      lastSeen=new Date().toISOString();
+    }
+    const newCount=orders.filter(o=>o.created_at&&new Date(o.created_at)>new Date(lastSeen)).length;
+    updateNewOrderBadge(newCount);
+
+    const banner=newCount>0?`
+      <div class="new-orders-banner">
+        <span>🔴 ${newCount} new order${newCount>1?"s":""} since you last checked</span>
+        <button onclick="markOrdersSeen()">Mark as seen</button>
+      </div>`:"";
+
+    list.innerHTML=banner+orders.map(o=>`
+      <div class="order-card">
+        <div class="order-top">
+          <div>
+            <div class="order-id">${o.order_id||"—"}</div>
+            <div class="order-date">${o.created_at?new Date(o.created_at).toLocaleString("en-NG",{dateStyle:"medium",timeStyle:"short"}):""}</div>
+          </div>
+          <span class="badge badge-${o.status||"Pending"}">${o.status||"Pending"}</span>
+        </div>
+        <div class="order-row"><b>Customer:</b> ${o.customer_name||"—"} · ${o.phone||"—"}</div>
+        <div class="order-row"><b>Email:</b> ${o.email||"—"}</div>
+        <div class="order-row"><b>Deliver to:</b> ${o.address||"—"}, ${o.city||"—"}</div>
+        <div class="order-row"><b>Products:</b> ${orderProductsHtml(o.products)}</div>
+        <div class="order-row"><b>Total:</b> ${o.total||"—"} &nbsp; <b>Shipping:</b> ${o.shipping_fee||"—"}</div>
+        ${o.proof_of_payment?`<div class="order-row"><a class="proof-link" href="${o.proof_of_payment}" target="_blank">View Proof of Payment →</a></div>`:""}
+        <div class="status-row">
+          <select id="status-${o.id}">
+            <option value="Pending" ${o.status==="Pending"?"selected":""}>Pending</option>
+            <option value="Approved" ${o.status==="Approved"?"selected":""}>Approved</option>
+            <option value="Shipped" ${o.status==="Shipped"?"selected":""}>Shipped</option>
+            <option value="Delivered" ${o.status==="Delivered"?"selected":""}>Delivered</option>
+          </select>
+          <button class="save-btn" onclick="updateStatus(${o.id},this)">Save</button>
+        </div>
+      </div>
+    `).join("");
+  }catch(e){
+    console.error(e);
+    list.innerHTML=`<p class="empty">${navigator.onLine===false?"You appear to be offline. Please check your connection and try refreshing.":"Could not load orders right now. Please try refreshing."}</p>`;
+  }
+}
+function updateNewOrderBadge(count){
+  const badge=document.getElementById("newOrderBadge");
+  if(count>0){badge.style.display="inline-block";badge.textContent=count}
+  else{badge.style.display="none"}
+}
+function escHtml(v){
+  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+}
+function orderProductsHtml(raw){
+  const text=String(raw||"").replace(/\r/g,"");
+  if(!text)return "—";
+  const blocks=text.split(/\n(?=•)/).map(x=>x.trim()).filter(Boolean);
+  return blocks.map(block=>{
+    const imgMatch=block.match(/\[Product image:\s*(https?:\/\/[^\]\s]+)\]/i);
+    const clean=block.replace(/\s*\[Product image:[^\]]*\]/ig,"").trim();
+    return `<div class="ordered-product">${imgMatch?`<a href="${escHtml(imgMatch[1])}" target="_blank" rel="noopener"><img class="ordered-product-img" src="${escHtml(imgMatch[1])}" alt="Ordered product" loading="lazy" onerror="this.style.display='none'"></a>`:""}<div class="ordered-product-info">${escHtml(clean||"Ordered product")}</div></div>`;
+  }).join("") || escHtml(text).replace(/\n/g,"<br>");
+}
+
+function markOrdersSeen(){
+  try{localStorage.setItem("romiluxe-admin-last-seen",new Date().toISOString())}catch(e){}
+  loadOrders();
+}
+
+async function updateStatus(rowId,btn){
+  const select=document.getElementById("status-"+rowId);
+  const newStatus=select.value;
+  btn.disabled=true;btn.textContent="Saving…";
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${rowId}`,{
+      method:"PATCH",
+      headers:{
+        "apikey":SUPABASE_ANON_KEY,
+        "Authorization":"Bearer "+SUPABASE_ANON_KEY,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal"
+      },
+      body:JSON.stringify({status:newStatus})
+    });
+    if(!res.ok)throw new Error("Status update failed ("+res.status+"): "+(await res.text().catch(()=>"")));
+    btn.textContent="Saved ✓";
+    setTimeout(()=>{btn.textContent="Save";btn.disabled=false},1500);
+    loadOrders();
+  }catch(e){
+    console.error(e);
+    btn.textContent="Failed — retry";
+    btn.disabled=false;
+  }
+}
+
+// TABS
+let currentTab="orders";
+function switchTab(tab){
+  currentTab=tab;
+  document.getElementById("tabOrdersBtn").classList.toggle("active",tab==="orders");
+  document.getElementById("tabProductsBtn").classList.toggle("active",tab==="products");
+  document.getElementById("tabBinBtn").classList.toggle("active",tab==="bin");
+  document.getElementById("ordersTab").style.display=tab==="orders"?"block":"none";
+  document.getElementById("productsTab").style.display=tab==="products"?"block":"none";
+  document.getElementById("binTab").style.display=tab==="bin"?"block":"none";
+  if(tab==="products")loadProducts();
+  if(tab==="bin")loadBin();
+}
+function refreshCurrentTab(){
+  if(currentTab==="orders")loadOrders();
+  else if(currentTab==="products")loadProducts();
+  else loadBin();
+}
+// Human-readable label for any product category (retail, wholesale, perfume, cosmetics, ...).
+const CATEGORY_LABELS={retail:"Retail",wholesale:"Wholesale",perfume:"Perfume",cosmetics:"Cosmetics"};
+function categoryLabel(c){return CATEGORY_LABELS[c]||"Retail"}
+function toggleWholesaleFields(){
+  const wholesale=document.getElementById("pCategory").value==="wholesale";
+  document.getElementById("wholesaleFields").style.display=wholesale?"grid":"none";
+  const unit=document.getElementById("pUnit"),hint=document.getElementById("unitHint"),moq=document.getElementById("pMoq");
+  if(wholesale){unit.value="dozen";unit.readOnly=true;hint.textContent="Wholesale price is per dozen. Customers can buy from 6 pieces upward.";moq.value=6}
+  else{unit.readOnly=false;hint.textContent="Use piece for normal retail items.";moq.value=1}
+  const mixSetting=document.getElementById("mixMatchSetting");
+  if(mixSetting)mixSetting.style.display=wholesale?"block":"none";
+  const mixBox=document.getElementById("allowMixMatch");
+  if(mixBox){
+    const isFakePiercingSticker=/fake\s*piercing\s*sticker/i.test(document.getElementById("pName")?.value||"");
+    if(wholesale){
+      mixBox.checked=!isFakePiercingSticker;
+      mixBox.disabled=isFakePiercingSticker;
+    }else{
+      mixBox.checked=false;
+      mixBox.disabled=false;
+    }
+  }
+}
+
+// PRODUCT VARIANTS — supports both colour and design variants while keeping the existing DB column compatible.
+let pendingVariants=[]; // {type,color/design,blob,previewUrl,existingUrl,originalName}
+let currentCoverFile=null;
+let coverCapturePromise=null;
+
+function updateVariantMode(){
+  const type=document.getElementById("variantType").value;
+  const nameInput=document.getElementById("variantColorName");
+  const btn=document.getElementById("addVariantBtn");
+  nameInput.placeholder=type==="design"?"Enter design name":"Enter colour name";
+  btn.textContent=type==="design"?"+ Add Design":"+ Add Colour";
+}
+
+// Make a stable local Blob immediately after the user picks a photo.
+// This is important on phones where a cloud-linked photo provider can release
+// the original File handle before the user presses Save.
+async function stabilizeImageFile(file){
+  if(!file)throw new Error("No image was selected.");
+  if(file.size>15*1024*1024)throw new Error("The selected image is too large. Please choose an image under 15MB.");
+  const objUrl=URL.createObjectURL(file);
+  try{
+    const res=await fetch(objUrl,{cache:"no-store"});
+    if(!res.ok)throw new Error("Could not access the selected image.");
+    const blob=await res.blob();
+    if(!blob.size)throw new Error("The selected image is empty.");
+    return new Blob([blob],{type:blob.type||file.type||"image/jpeg"});
+  }catch(firstError){
+    try{
+      return await new Promise((resolve,reject)=>{
+        const r=new FileReader();
+        r.onload=()=>{
+          const data=r.result;
+          if(!(data instanceof ArrayBuffer)||!data.byteLength)return reject(new Error("Empty image"));
+          resolve(new Blob([data],{type:file.type||"image/jpeg"}));
+        };
+        r.onerror=()=>reject(new Error("FileReader failed"));
+        r.readAsArrayBuffer(file);
+      });
+    }catch(secondError){
+      throw new Error("Could not read the selected image. Please choose a photo stored on your device (not only in cloud storage), then try again.");
+    }
+  }finally{
+    URL.revokeObjectURL(objUrl);
+  }
+}
+
+async function addColorVariant(){
+  const type=document.getElementById("variantType").value;
+  const nameInput=document.getElementById("variantColorName");
+  const fileInput=document.getElementById("variantColorImage");
+  const addBtn=document.getElementById("addVariantBtn");
+  const name=nameInput.value.trim();
+  const file=fileInput.files[0];
+  if(!name||!file){
+    alert(type==="design"?"Please enter a design name and choose a photo for it.":"Please enter a colour name and choose a photo for it.");
+    return;
+  }
+  addBtn.disabled=true;addBtn.textContent="Reading photo…";
+  try{
+    const blob=await stabilizeImageFile(file);
+    const previewUrl=URL.createObjectURL(blob);
+    pendingVariants.push(type==="design"
+      ?{type,design:name,blob,previewUrl,originalName:file.name}
+      :{type,color:name,blob,previewUrl,originalName:file.name});
+    nameInput.value="";
+    fileInput.value="";
+    renderVariantPreview();
+  }catch(e){
+    console.error(e);
+    alert(e.message||"Could not read the selected image. Please try another photo.");
+  }finally{
+    addBtn.disabled=false;
+    updateVariantMode();
+  }
+}
+function removeColorVariant(idx){
+  const v=pendingVariants[idx];
+  if(v&&v.previewUrl)URL.revokeObjectURL(v.previewUrl);
+  pendingVariants.splice(idx,1);
+  renderVariantPreview();
+}
+function renderVariantPreview(){
+  const wrap=document.getElementById("variantPreviewList");
+  if(!pendingVariants.length){wrap.innerHTML="";return}
+  wrap.innerHTML=pendingVariants.map((v,i)=>{
+    const type=v.type==="design"?"Design":"Colour";
+    const name=v.type==="design"?v.design:v.color;
+    return `<div class="product-card2" style="margin-bottom:8px"><img src="${v.previewUrl}" alt="${name}"><div class="pinfo"><div class="pname">${name}</div><div class="pmeta">${type}</div></div><button type="button" class="del-btn" onclick="removeColorVariant(${i})">Remove</button></div>`;
+  }).join("");
+}
+
+async function captureCoverSelection(){
+  const input=document.getElementById("pImage");
+  const file=input.files[0];
+  if(!file){currentCoverFile=null;coverCapturePromise=null;return}
+  const hint=document.getElementById("coverHint");
+  hint.textContent="Preparing photo…";
+  coverCapturePromise=stabilizeImageFile(file).then(blob=>{
+    currentCoverFile=blob;
+    hint.textContent="Cover photo ready ✓";
+    return blob;
+  }).catch(err=>{
+    currentCoverFile=null;
+    hint.textContent=err.message||"Could not read the selected image.";
+    throw err;
+  });
+  try{await coverCapturePromise}catch(e){console.error(e)}
+}
+
+// PRODUCTS
+let editingProductId=null;
+let currentCoverUrl=null;
+
+async function fileToDataUrl(file){
+  if(!file)throw new Error("No image was selected.");
+  // Blob.arrayBuffer is more reliable than FileReader for mobile/cloud-backed files.
+  try{
+    const buffer=await file.arrayBuffer();
+    if(!buffer.byteLength)throw new Error("Empty file");
+    let binary="";const bytes=new Uint8Array(buffer);const chunk=0x8000;
+    for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+    return `data:${file.type||"application/octet-stream"};base64,${btoa(binary)}`;
+  }catch(e){
+    try{
+      return await new Promise((resolve,reject)=>{
+        const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("FileReader failed"));r.readAsDataURL(file);
+      });
+    }catch(e2){
+      throw new Error("Could not read the selected image. Please choose a photo stored on your device and try again.");
+    }
+  }
+}
+
+async function compressImage(file,maxDim=1280,quality=0.72){
+  try{
+    const dataUrl=await fileToDataUrl(file);
+    const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=dataUrl});
+    let{width:w,height:h}=img;
+    if(w>maxDim||h>maxDim){
+      if(w>h){h=Math.round(h*(maxDim/w));w=maxDim}
+      else{w=Math.round(w*(maxDim/h));h=maxDim}
+    }
+    const canvas=document.createElement("canvas");
+    canvas.width=w;canvas.height=h;
+    canvas.getContext("2d").drawImage(img,0,0,w,h);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",quality));
+    return blob||file;
+  }catch(e){return file}
+}
+// Upload images reliably and keep the real ImgBB error when something goes wrong.
+// The same File can be used as a cover photo and as a colour variant without
+// uploading it twice.
+const imageUploadCache=new WeakMap();
+async function uploadProductImage(file){
+  if(!file)throw new Error("No image was selected.");
+  if(imageUploadCache.has(file))return imageUploadCache.get(file);
+  const promise=(async()=>{
+    if(file.size>15*1024*1024){
+      throw new Error("The selected image is too large. Please choose an image under 15MB.");
+    }
+    const compressed=await compressImage(file);
+    const base64=await fileToDataUrl(compressed);
+    const comma=base64.indexOf(",");
+    if(comma===-1)throw new Error("Could not read the selected image.");
+    const base64Data=base64.slice(comma+1);
+    const fd=new FormData();
+    fd.append("key",IMGBB_API_KEY);
+    fd.append("image",base64Data);
+    fd.append("name","product-"+Date.now());
+    let res;
+    try{
+      res=await fetch("https://api.imgbb.com/1/upload",{method:"POST",body:fd});
+    }catch(err){
+      throw new Error("Could not connect to the image upload service. Please check your internet connection and try again.");
+    }
+    const raw=await res.text();
+    let json=null;
+    try{json=JSON.parse(raw)}catch(e){}
+    if(res.ok&&json&&json.success&&json.data&&json.data.url)return json.data.url;
+    const apiError=json&&json.error&&json.error.message?json.error.message:(json&&json.status?"ImgBB returned status "+json.status:raw.slice(0,220));
+    throw new Error("Image upload failed: "+apiError);
+  })();
+  imageUploadCache.set(file,promise);
+  try{return await promise}catch(e){imageUploadCache.delete(file);throw e}
+}
+
+function resetProductForm(){
+  editingProductId=null;
+  currentCoverUrl=null;
+  currentCoverFile=null;
+  coverCapturePromise=null;
+  pendingVariants.forEach(v=>{if(v.previewUrl)URL.revokeObjectURL(v.previewUrl)});
+  pendingVariants=[];
+  ["pName","pPrice","pUnit","pMoq","pContents","pSizes","pDescription"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("pCategory").value="retail";
+  document.getElementById("pImage").value="";
+  document.getElementById("variantType").value="color";
+  document.getElementById("variantColorName").value="";
+  document.getElementById("variantColorImage").value="";
+  const mixBox=document.getElementById("allowMixMatch");if(mixBox)mixBox.checked=false;
+  updateVariantMode();
+  document.getElementById("currentCoverPreview").innerHTML="";
+  document.getElementById("coverHint").textContent="";
+  document.getElementById("formTitle").textContent="Add a New Product";
+  document.getElementById("addProductBtn").textContent="Add Product";
+  document.getElementById("cancelEditBtn").style.display="none";
+  document.getElementById("productMsg").className="msg";
+  document.getElementById("productMsg").textContent="";
+  toggleWholesaleFields();
+  renderVariantPreview();
+}
+function cancelEdit(){
+  resetProductForm();
+}
+
+function startEditProduct(p){
+  editingProductId=p.id;
+  currentCoverUrl=p.image_url;
+  document.getElementById("pCategory").value=["wholesale","perfume","cosmetics"].includes(p.category)?p.category:"retail";
+  document.getElementById("pName").value=p.name||"";
+  document.getElementById("pPrice").value=p.price||"";
+  document.getElementById("pUnit").value=p.unit||"";
+  document.getElementById("pMoq").value=p.moq||1;
+  document.getElementById("pContents").value=p.contents||"";
+  document.getElementById("pSizes").value=p.sizes||"";
+  document.getElementById("pDescription").value=p.description||"";
+  document.getElementById("pImage").value="";
+  document.getElementById("currentCoverPreview").innerHTML=p.image_url?`<img src="${p.image_url}" alt="Current cover photo">`:"";
+  document.getElementById("coverHint").textContent="Leave this empty to keep the current cover photo, or choose a new one to replace it.";
+
+  pendingVariants.forEach(v=>{if(v.previewUrl&&v.blob)URL.revokeObjectURL(v.previewUrl)});
+  pendingVariants=[];
+  currentCoverFile=null;
+  coverCapturePromise=null;
+  let savedMixMatch=false;
+  if(p.color_variants){
+    try{
+      const parsed=typeof p.color_variants==="string"?JSON.parse(p.color_variants):p.color_variants;
+      const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.variants)?parsed.variants:[]);
+      savedMixMatch=!!parsed?.meta?.mixMatch;
+      arr.forEach(v=>pendingVariants.push({type:v.type==="design"?"design":"color",color:v.color,design:v.design,existingUrl:v.image,previewUrl:v.image}));
+    }catch(e){}
+  }
+  const mixBox=document.getElementById("allowMixMatch");
+  if(mixBox){
+    const isFakePiercingSticker=/fake\s*piercing\s*sticker/i.test(String(p.name||''));
+    mixBox.checked=p.category==="wholesale" && !isFakePiercingSticker;
+    mixBox.disabled=p.category==="wholesale" && isFakePiercingSticker;
+  }
+  if(pendingVariants.length){
+    document.getElementById("variantType").value=pendingVariants[0].type||"color";
+  }else{
+    document.getElementById("variantType").value="color";
+  }
+  updateVariantMode();
+  renderVariantPreview();
+
+  toggleWholesaleFields();
+  document.getElementById("formTitle").textContent="Edit Product";
+  document.getElementById("addProductBtn").textContent="Save Changes";
+  document.getElementById("cancelEditBtn").style.display="block";
+  document.getElementById("productMsg").className="msg";
+  document.getElementById("productMsg").textContent="";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function saveProduct(){
+  const msg=document.getElementById("productMsg");
+  const btn=document.getElementById("addProductBtn");
+  const category=document.getElementById("pCategory").value;
+  const name=document.getElementById("pName").value.trim();
+  const price=document.getElementById("pPrice").value;
+  const isWholesale=category==="wholesale";
+  const unit=isWholesale?"dozen":(document.getElementById("pUnit").value.trim()||"piece");
+  const moq=isWholesale?6:1;
+  const contents=document.getElementById("pContents").value.trim();
+  const sizes=document.getElementById("pSizes").value.trim();
+  const description=document.getElementById("pDescription").value.trim();
+  const selectedCoverFile=document.getElementById("pImage").files[0];
+  const file=selectedCoverFile||currentCoverFile;
+  msg.className="msg";msg.textContent="";
+
+  if(!name||!price){
+    msg.className="msg err";msg.textContent="Please fill in the product name and price.";
+    return;
+  }
+  // If the user added a colour photo but forgot to choose a separate cover photo,
+  // use the first colour photo as the product cover. This prevents a perfectly
+  // valid colour variant from being rejected just because the cover field is empty.
+  const fallbackCoverFile=(!editingProductId&&!file&&pendingVariants.length&&pendingVariants[0].blob)
+    ?pendingVariants[0].blob:null;
+  if(!editingProductId&&!file&&!fallbackCoverFile){
+    msg.className="msg err";msg.textContent="Please choose a cover photo, or add a colour with a photo first.";
+    return;
+  }
+  if(category==="wholesale"&&!contents){
+    msg.className="msg err";msg.textContent="Please describe the pack contents for wholesale items (e.g. '1 pack = 12 pcs').";
+    return;
+  }
+
+  btn.disabled=true;btn.textContent="Saving…";
+  try{
+    if(coverCapturePromise){
+      btn.textContent="Preparing cover photo…";
+      await coverCapturePromise;
+    }
+    const stableCoverFile=currentCoverFile||selectedCoverFile||null;
+    // Cover photo: upload a new one only if she chose a new file, otherwise keep the existing URL.
+    let imageUrl=currentCoverUrl;
+    const coverFile=stableCoverFile||fallbackCoverFile;
+    if(coverFile){
+      btn.textContent="Uploading cover photo…";
+      imageUrl=await uploadProductImage(coverFile);
+    }
+
+    // Save both colour and design variants in the same DB column.
+    // The main website reads `type: "design"` to render design choices.
+    btn.textContent=pendingVariants.some(v=>v.type==="design")?"Saving variants…":"Saving colours…";
+    const colorVariants=[];
+    for(const v of pendingVariants){
+      let url=v.existingUrl||null;
+      if(v.blob){
+        // Reuse the cover upload when this is the exact same stable Blob.
+        if(coverFile===v.blob && imageUrl) url=imageUrl;
+        else url=await uploadProductImage(v.blob);
+      }
+      if(!url) continue;
+      if(v.type==="design") colorVariants.push({type:"design",design:v.design,image:url});
+      else colorVariants.push({type:"color",color:v.color,image:url});
+    }
+
+    btn.textContent="Saving product…";
+    const payload={
+      category,name,price:Number(price),unit,
+      moq:category==="wholesale"?6:1,
+      contents:category==="wholesale"?contents:null,
+      sizes:sizes||null,
+      description:description||null,
+      color_variants:(isWholesale && !/fake\s*piercing\s*sticker/i.test(name))
+        ?JSON.stringify({meta:{mixMatch:true},variants:colorVariants})
+        :(colorVariants.length?JSON.stringify(colorVariants):null),
+      image_url:imageUrl
+    };
+
+    let res;
+    if(editingProductId){
+      res=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${editingProductId}`,{
+        method:"PATCH",
+        headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify(payload)
+      });
+    }else{
+      res=await fetch(`${SUPABASE_URL}/rest/v1/products`,{
+        method:"POST",
+        headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({...payload,is_deleted:false})
+      });
+    }
+    if(!res.ok){const t=await res.text().catch(()=>"");throw new Error("Save failed ("+res.status+"): "+t)}
+
+    msg.className="msg ok";
+    msg.textContent=editingProductId?"Changes saved! The website will update shortly.":"Product added! It'll appear on the website shortly.";
+    resetProductForm();
+    loadProducts();
+  }catch(e){
+    console.error(e);
+    msg.className="msg err";
+    const errorMessage=e&&e.message?e.message:String(e);
+    const fileForInfo=file||fallbackCoverFile;
+    const fileInfo=fileForInfo?` [File: ${fileForInfo.name}, ${(fileForInfo.size/1024/1024).toFixed(2)}MB, type: ${fileForInfo.type||"unknown"}]`:"";
+    msg.textContent=(navigator.onLine===false?"You appear to be offline. Please check your connection and try again.":errorMessage)+fileInfo;
+    btn.disabled=false;btn.textContent=editingProductId?"Save Changes":"Add Product";
+  }
+}
+
+function getVariantCount(value){
+  try{
+    const parsed=typeof value==="string"?JSON.parse(value):value;
+    const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.variants)?parsed.variants:[]);
+    return arr.length;
+  }catch(e){return 0}
+}
+
+async function normalizeWholesaleProducts(products){
+  const wholesale=products.filter(p=>p&&p.category==="wholesale"&&(p.unit!=="dozen"||Number(p.moq)!==6));
+  if(!wholesale.length)return products;
+  await Promise.all(wholesale.map(async p=>{
+    try{
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${p.id}`,{
+        method:"PATCH",
+        headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({unit:"dozen",moq:6})
+      });
+      if(res.ok){p.unit="dozen";p.moq=6}
+      else console.warn("Could not normalize wholesale product",p.id,res.status);
+    }catch(e){console.warn("Could not normalize wholesale product",p.id,e)}
+  }));
+  return products;
+}
+
+async function loadProducts(){
+  const list=document.getElementById("productsList");
+  list.innerHTML=`<p class="empty">Loading products…</p>`;
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?is_deleted=eq.false&select=*&order=created_at.desc`,{
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
+    });
+    if(!res.ok)throw new Error("Fetch failed: "+res.status);
+    const products=await res.json();
+    if(!Array.isArray(products)||!products.length){
+      list.innerHTML=`<p class="empty">No products yet. Products you add will appear here.</p>`;
+      return;
+    }
+    await normalizeWholesaleProducts(products);
+    window.__productsCache=products;
+    list.innerHTML=products.map(p=>`
+      <div class="product-card2">
+        <img src="${p.image_url}" alt="${p.name}">
+        <div class="pinfo">
+          <div class="pname">${p.name}</div>
+          <div class="pmeta">${categoryLabel(p.category)} · ₦${Number(p.price).toLocaleString("en-NG")}/${p.unit}${p.category==="wholesale"?" · "+(p.contents||""):""}${p.sizes?" · Sizes: "+p.sizes:""}${p.color_variants?(()=>{try{const vs=JSON.parse(p.color_variants);const dc=vs.filter(v=>v.type==="design").length;const cc=vs.length-dc;return (cc?" · "+cc+" colour(s)":"")+(dc?" · "+dc+" design(s)":"")}catch(e){return ""}})():""}</div>
+        </div>
+        <div class="product-actions">
+          <button class="edit-btn" onclick='startEditProduct(window.__productsCache.find(x=>x.id===${p.id}))'>Edit</button>
+          <button class="del-btn" onclick="deleteProduct(${p.id},this)">Delete</button>
+        </div>
+      </div>
+    `).join("");
+  }catch(e){
+    console.error(e);
+    list.innerHTML=`<p class="empty">${navigator.onLine===false?"You appear to be offline. Please check your connection and try refreshing.":"Could not load products right now. Please try refreshing."}</p>`;
+  }
+}
+async function deleteProduct(id,btn){
+  if(!confirm("Move this product to the recycle bin? You can restore it later if needed."))return;
+  btn.disabled=true;btn.textContent="Removing…";
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`,{
+      method:"PATCH",
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({is_deleted:true})
+    });
+    if(!res.ok)throw new Error("Delete failed ("+res.status+"): "+(await res.text().catch(()=>"")));
+    if(editingProductId===id)resetProductForm();
+    loadProducts();
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;btn.textContent="Delete";
+  }
+}
+
+// RECYCLE BIN
+async function loadBin(){
+  const list=document.getElementById("binList");
+  list.innerHTML=`<p class="empty">Loading…</p>`;
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?is_deleted=eq.true&select=*&order=created_at.desc`,{
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
+    });
+    if(!res.ok)throw new Error("Fetch failed: "+res.status);
+    const products=await res.json();
+    if(!Array.isArray(products)||!products.length){
+      list.innerHTML=`<p class="empty">The recycle bin is empty.</p>`;
+      return;
+    }
+    list.innerHTML=products.map(p=>`
+      <div class="product-card2">
+        <img src="${p.image_url}" alt="${p.name}">
+        <div class="pinfo">
+          <div class="pname">${p.name}</div>
+          <div class="pmeta">${categoryLabel(p.category)} · ₦${Number(p.price).toLocaleString("en-NG")}/${p.unit}</div>
+        </div>
+        <button class="restore-btn" onclick="restoreProduct(${p.id},this)">Restore</button>
+      </div>
+    `).join("");
+  }catch(e){
+    console.error(e);
+    list.innerHTML=`<p class="empty">${navigator.onLine===false?"You appear to be offline. Please check your connection and try refreshing.":"Could not load the recycle bin right now. Please try refreshing."}</p>`;
+  }
+}
+async function restoreProduct(id,btn){
+  btn.disabled=true;btn.textContent="Restoring…";
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${id}`,{
+      method:"PATCH",
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({is_deleted:false})
+    });
+    if(!res.ok)throw new Error("Restore failed ("+res.status+"): "+(await res.text().catch(()=>"")));
+    loadBin();
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;btn.textContent="Restore";
+  }
+}
+</script>
+</body>
+</html>
