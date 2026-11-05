@@ -863,7 +863,7 @@ async function migrateOldPhotos(){
     throw last;
   };
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,name,image_url,color_variants&order=id.asc`,{headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/products?is_deleted=eq.false&select=id,name,image_url,color_variants&order=id.asc`,{headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}});
     if(!res.ok)throw new Error("Could not read products ("+res.status+")");
     const rows=await res.json();
     const todo=rows.filter(p=>{
