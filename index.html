@@ -843,37 +843,53 @@ function variantSummary(value){
 async function migrateOldPhotos(){
   const btn=document.getElementById("migrateBtn"),out=document.getElementById("migrateMsg");
   const isOld=u=>u&&/^https?:/i.test(u)&&!u.includes(`/storage/v1/object/public/${STORAGE_BUCKET}/`);
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   btn.disabled=true;out.textContent="Checking products…";
-  const failed=[];let moved=0,total=0;
+  const failed=[];let moved=0;
+  const download=async url=>{
+    let last;
+    for(let i=0;i<3;i++){
+      const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),25000);
+      try{
+        const r=await fetch(url,{mode:"cors",cache:"no-store",signal:ctrl.signal});
+        if(r.status===404||r.status===410)throw Object.assign(new Error("the old photo no longer exists"),{gone:true});
+        if(!r.ok)throw new Error("download error "+r.status);
+        const blob=await r.blob();
+        if(!blob.size)throw new Error("empty photo");
+        return blob;
+      }catch(e){last=e;if(e.gone)break;await sleep(1500*(i+1))}
+      finally{clearTimeout(timer)}
+    }
+    throw last;
+  };
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/products?select=id,name,image_url,color_variants&order=id.asc`,{headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}});
     if(!res.ok)throw new Error("Could not read products ("+res.status+")");
     const rows=await res.json();
+    const todo=rows.filter(p=>{
+      if(isOld(p.image_url))return true;
+      try{const parsed=typeof p.color_variants==="string"?JSON.parse(p.color_variants):p.color_variants;const arr=Array.isArray(parsed)?parsed:(parsed&&parsed.variants)||[];return arr.some(v=>v&&isOld(v.image))}catch(e){return false}
+    });
+    if(!todo.length){out.textContent="All photos are already on the new storage ✓";btn.disabled=false;return}
     const cache=new Map();
     const copy=async url=>{
       if(cache.has(url))return cache.get(url);
-      const p=(async()=>{
-        const r=await fetch(url,{mode:"cors",cache:"no-store"});
-        if(!r.ok)throw new Error("download "+r.status);
-        const blob=await r.blob();
-        if(!blob.size)throw new Error("empty");
-        return await uploadImage(blob,"products");
-      })();
-      cache.set(url,p);return p;
+      const p=(async()=>{const blob=await download(url);return await uploadImage(blob,"products")})();
+      cache.set(url,p);
+      try{return await p}catch(e){cache.delete(url);throw e}
     };
     let i=0;
-    for(const p of rows){
-      i++;out.textContent=`Moving photos… product ${i} of ${rows.length}`;
-      let changed=false,bad=false;
-      let imageUrl=p.image_url;
-      if(isOld(imageUrl)){total++;try{imageUrl=await copy(imageUrl);changed=true}catch(e){bad=true}}
+    for(const p of todo){
+      i++;out.textContent=`Moving photos… ${i} of ${todo.length} (keep this page open)`;
+      let changed=false;let imageUrl=p.image_url;let reason="";
+      if(isOld(imageUrl)){try{imageUrl=await copy(imageUrl);changed=true}catch(e){reason=e.message||String(e)}}
       let cv=null;
       if(p.color_variants){
         try{
           const parsed=typeof p.color_variants==="string"?JSON.parse(p.color_variants):p.color_variants;
-          const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.variants)?parsed.variants:null);
+          const arr=Array.isArray(parsed)?parsed:(parsed&&Array.isArray(parsed.variants)?parsed.variants:null);
           if(arr){
-            for(const v of arr){if(v&&isOld(v.image)){total++;try{v.image=await copy(v.image);changed=true}catch(e){bad=true}}}
+            for(const v of arr){if(v&&isOld(v.image)){try{v.image=await copy(v.image);changed=true}catch(e){reason=reason||e.message||String(e)}}}
             cv=JSON.stringify(parsed);
           }
         }catch(e){}
@@ -881,13 +897,14 @@ async function migrateOldPhotos(){
       if(changed){
         const body={image_url:imageUrl};if(cv)body.color_variants=cv;
         const r=await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${p.id}`,{method:"PATCH",headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(body)});
-        if(r.ok)moved++;else bad=true;
+        if(r.ok)moved++;else reason=reason||("could not save ("+r.status+")");
       }
-      if(bad)failed.push(p.name);
+      if(reason)failed.push(`${p.name} (#${p.id}: ${reason.replace(/Failed to fetch|Load failed|NetworkError.*/i,"photo could not be downloaded")})`);
+      await sleep(300);
     }
-    out.textContent=total===0?"All photos are already on the new storage ✓":`Done. ${moved} product(s) updated.`+(failed.length?` These still need their photo re-uploaded (use Edit): ${failed.join(", ")}`:" Every photo is now on the new storage ✓");
+    out.textContent=`Done. ${moved} product(s) moved to the new storage.`+(failed.length?` Still need a new photo (use Edit): ${failed.join("; ")}`:" Every photo is now on the new storage ✓");
     loadProducts();
-  }catch(e){console.error(e);out.textContent="Stopped: "+(e.message||e)}
+  }catch(e){console.error(e);out.textContent="Stopped: "+(e.message||e)+". Tap the button again to continue where it stopped."}
   finally{btn.disabled=false}
 }
 function getVariantCount(value){
