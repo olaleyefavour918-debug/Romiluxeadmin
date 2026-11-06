@@ -75,7 +75,7 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
 input[type=range]{padding:0;border:0;background:transparent}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@600&family=Cinzel:wght@600&family=Cormorant+Garamond:wght@600&family=Montserrat:wght@600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@600&family=Cinzel:wght@600&family=Cormorant+Garamond:wght@600&family=Montserrat:wght@500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -184,11 +184,14 @@ input[type=range]{padding:0;border:0;background:transparent}
       <div class="wm-grid">
         <div>
           <div class="field"><label>Watermark text</label><input id="wmText" maxlength="40" oninput="wmSchedulePreview()"></div>
+          <label class="wm-check" style="margin-bottom:12px"><input type="checkbox" id="wmIcon" onchange="wmSchedulePreview()"><span><b>Show the shopping-bag mark</b></span></label>
+          <div class="field"><label>Small line under the name (optional)</label><input id="wmTagline" maxlength="40" oninput="wmSchedulePreview()" placeholder="e.g. JEWELLERY · ACCESSORIES"></div>
           <div class="field"><label>Font style</label><select id="wmFont" onchange="wmSchedulePreview()"></select></div>
           <div class="field"><label>Font size: <span id="wmSizeVal"></span></label><input id="wmSize" type="range" min="24" max="80" step="1" oninput="wmSchedulePreview()"></div>
           <div class="field"><label>Letter spacing: <span id="wmSpacingVal"></span></label><input id="wmSpacing" type="range" min="0" max="24" step="1" oninput="wmSchedulePreview()"></div>
           <div class="form-row">
             <div class="field"><label>Text colour</label><input id="wmColor" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
+            <div class="field"><label>Mark &amp; small-line colour</label><input id="wmAccent" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
             <div class="field"><label>Band colour</label><input id="wmBand" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
           </div>
           <div class="field"><label>Opacity: <span id="wmOpacityVal"></span></label><input id="wmOpacity" type="range" min="0.2" max="1" step="0.05" oninput="wmSchedulePreview()"></div>
@@ -931,8 +934,8 @@ function variantSummary(value){
 // always rendered from the original, a watermark can never be applied twice, can be removed
 // instantly (original is still there), and can be regenerated whenever the design changes.
 // =====================================================================
-const WM_DEFAULTS={enabled:true,text:"ROMILUXE NG",font:"Cormorant Garamond",size:44,color:"#b8975a",opacity:0.95,position:"center",band_color:"#fbf8f3",letter_spacing:10};
-const WM_FONTS=["Cormorant Garamond","Playfair Display","Cinzel","Bodoni Moda","Montserrat"];
+const WM_DEFAULTS={enabled:true,text:"ROMILUXE NG",font:"Montserrat",size:40,color:"#2c2620",opacity:1,position:"center",band_color:"#ffffff",letter_spacing:14,show_icon:true,tagline:"JEWELLERY · ACCESSORIES",accent_color:"#b8975a"};
+const WM_FONTS=["Montserrat","Cormorant Garamond","Playfair Display","Cinzel","Bodoni Moda"];
 let wmSettings={...WM_DEFAULTS};
 const wmMap=new Map(); // original_url -> {watermarked_url, excluded, settings_hash}
 let wmLoadedPromise=null;
@@ -941,7 +944,7 @@ let wmFailedList=[];
 const SB_HEAD=(extra)=>({"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,...(extra||{})});
 
 function wmHash(s){
-  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,"v1"].join("|");
+  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,s.show_icon?1:0,s.tagline||"",s.accent_color,"v2"].join("|");
   let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;
   return h.toString(36);
 }
@@ -964,7 +967,7 @@ async function wmLoad(){
   const sres=await fetch(`${SUPABASE_URL}/rest/v1/watermark_settings?id=eq.1&select=*`,{headers:SB_HEAD()});
   if(!sres.ok)throw new Error("settings "+sres.status);
   const rows=await sres.json();
-  if(rows[0]){wmSettings={...WM_DEFAULTS,...rows[0]};wmSettings.size=Number(wmSettings.size);wmSettings.opacity=Number(wmSettings.opacity);wmSettings.letter_spacing=Number(wmSettings.letter_spacing)}
+  if(rows[0]){wmSettings={...WM_DEFAULTS,...rows[0]};wmSettings.size=Number(wmSettings.size);wmSettings.opacity=Number(wmSettings.opacity);wmSettings.letter_spacing=Number(wmSettings.letter_spacing);wmSettings.show_icon=!!wmSettings.show_icon;wmSettings.tagline=wmSettings.tagline||""}
   const rres=await fetch(`${SUPABASE_URL}/rest/v1/image_watermarks?select=original_url,watermarked_url,excluded,settings_hash&limit=5000`,{headers:SB_HEAD()});
   if(!rres.ok)throw new Error("records "+rres.status);
   wmMap.clear();
@@ -972,11 +975,15 @@ async function wmLoad(){
   return true;
 }
 async function wmLoadFont(font){
-  try{await Promise.race([document.fonts.load(`600 48px "${font}"`),new Promise(r=>setTimeout(r,4000))])}catch(e){}
+  try{await Promise.race([Promise.all([document.fonts.load(`500 48px "${font}"`),document.fonts.load(`600 48px "${font}"`)]),new Promise(r=>setTimeout(r,4000))])}catch(e){}
 }
-// Draws: photo area (whole photo visible, soft blurred backdrop) + brand band underneath with the text.
+// Draws: photo area (whole photo visible, soft blurred backdrop) + brand band underneath:
+//   [bag mark]  ROMILUXE NG
+//      JEWELLERY · ACCESSORIES
+const WM_BAG_BODY=new Path2D("M6.5 11h19l1.4 15.2a1.2 1.2 0 0 1-1.2 1.3H6.3a1.2 1.2 0 0 1-1.2-1.3L6.5 11z");
+const WM_BAG_HANDLE=new Path2D("M11 14.5V9.5a5 5 0 0 1 10 0v5");
 function wmDraw(ctx,src,s,S){
-  const band=Math.round(S*0.12),ph=S-band;
+  const band=Math.round(S*0.14),ph=S-band;
   ctx.fillStyle=s.band_color;ctx.fillRect(0,0,S,S);
   ctx.save();ctx.beginPath();ctx.rect(0,0,S,ph);ctx.clip();
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
@@ -991,20 +998,49 @@ function wmDraw(ctx,src,s,S){
     ctx.save();ctx.translate((S-w)/2,(ph-h)/2);src.draw(ctx,w,h);ctx.restore();
   }
   ctx.restore();
-  // brand text
-  const text=String(s.text||"").trim();
-  if(!text)return;
-  let px=Math.min(s.size*S/1000,band*0.7),sp=s.letter_spacing*S/1000;
-  const family=`"${s.font}", "Cormorant Garamond", Georgia, serif`;
-  const measure=()=>{ctx.font=`600 ${px}px ${family}`;let w=0;for(const ch of text)w+=ctx.measureText(ch).width;return w+sp*(Math.max(0,[...text].length-1))};
-  let total=measure();const pad=S*0.05,maxW=S-2*pad;
-  if(total>maxW){const f=maxW/total;px*=f;sp*=f;total=measure()}
-  let x=s.position==="left"?pad:s.position==="right"?S-pad-total:(S-total)/2;
+  // hairline between photo and band
+  ctx.fillStyle="rgba(184,151,90,0.35)";ctx.fillRect(0,ph,S,Math.max(1,Math.round(S*0.0015)));
+  const text=String(s.text||"").trim(),tag=String(s.tagline||"").trim();
+  if(!text&&!tag&&!s.show_icon)return;
+  const wt=s.font==="Montserrat"?500:600;
+  const family=`"${s.font}", "Montserrat", Arial, sans-serif`;
+  const pad=S*0.05,maxW=S-2*pad;
+  let px=Math.min(s.size*S/1000,band*0.34),sp=s.letter_spacing*S/1000;
+  const hasTag=!!tag,hasIcon=!!s.show_icon;
+  const gap=px*0.7;
+  const measureText=(t,p,sps)=>{ctx.font=`${wt} ${p}px ${family}`;let w=0;for(const ch of t)w+=ctx.measureText(ch).width;return w+sps*Math.max(0,[...t].length-1)};
+  let iconSize=px*1.35;
+  const lineW=()=>(hasIcon?iconSize+gap:0)+(text?measureText(text,px,sp):0);
+  let total=lineW();
+  if(total>maxW){const f=maxW/total;px*=f;sp*=f;iconSize*=f;total=lineW()}
+  let tpx=Math.max(S*0.0095,px*0.36),tsp=tpx*0.42;
+  let tagW=hasTag?measureText(tag,tpx,tsp):0;
+  if(tagW>maxW){const f=maxW/tagW;tpx*=f;tsp*=f;tagW=measureText(tag,tpx,tsp)}
+  const blockH=px*1.35+(hasTag?tpx*1.6:0);
+  const top=ph+(band-blockH)/2;
+  const line1Y=top+px*0.68,line2Y=top+px*1.35+tpx*0.9;
+  const startX=w=>s.position==="left"?pad:s.position==="right"?S-pad-w:(S-w)/2;
   ctx.save();
   ctx.globalAlpha=Math.max(0,Math.min(1,Number(s.opacity)));
-  ctx.fillStyle=s.color;ctx.textBaseline="middle";ctx.textAlign="left";ctx.font=`600 ${px}px ${family}`;
-  const y=ph+band/2+px*0.04;
-  for(const ch of text){ctx.fillText(ch,x,y);x+=ctx.measureText(ch).width+sp}
+  ctx.textBaseline="middle";ctx.textAlign="left";
+  let x=startX(total);
+  if(hasIcon){
+    ctx.save();ctx.translate(x,line1Y-iconSize/2);const k=iconSize/32;ctx.scale(k,k);
+    ctx.strokeStyle=s.accent_color;ctx.lineWidth=1.7;ctx.lineJoin="round";ctx.lineCap="round";
+    ctx.stroke(WM_BAG_BODY);ctx.stroke(WM_BAG_HANDLE);ctx.restore();
+    x+=iconSize+gap;
+  }
+  if(text){
+    ctx.fillStyle=s.color;ctx.font=`${wt} ${px}px ${family}`;
+    for(const ch of text){ctx.fillText(ch,x,line1Y);x+=ctx.measureText(ch).width+sp}
+  }
+  if(hasTag){
+    let tx=startX(tagW);
+    if(s.position==="center"&&hasIcon&&text)tx=startX(total)+(hasIcon?iconSize+gap:0)+((text?measureText(text,px,sp):0)-tagW)/2;
+    if(s.position==="center"&&!(hasIcon&&text))tx=startX(tagW);
+    ctx.fillStyle=s.accent_color;ctx.font=`500 ${tpx}px ${family}`;
+    for(const ch of tag){ctx.fillText(ch,tx,line2Y);tx+=ctx.measureText(ch).width+tsp}
+  }
   ctx.restore();
 }
 async function wmRenderBlobs(srcBlob,s){
@@ -1133,12 +1169,14 @@ function wmReadForm(){
     enabled:g("wmEnabled").checked,
     text:g("wmText").value.trim(),font:g("wmFont").value,
     size:Number(g("wmSize").value),color:g("wmColor").value,opacity:Number(g("wmOpacity").value),
-    position:g("wmPosition").value,band_color:g("wmBand").value,letter_spacing:Number(g("wmSpacing").value)
+    position:g("wmPosition").value,band_color:g("wmBand").value,letter_spacing:Number(g("wmSpacing").value),
+    show_icon:g("wmIcon").checked,tagline:g("wmTagline").value.trim(),accent_color:g("wmAccent").value
   };
 }
 function wmFillForm(){
   const g=id=>document.getElementById(id);
   g("wmEnabled").checked=!!wmSettings.enabled;
+  g("wmIcon").checked=!!wmSettings.show_icon;g("wmTagline").value=wmSettings.tagline||"";g("wmAccent").value=wmSettings.accent_color||"#b8975a";
   Object.entries(WM_FIELD).forEach(([id,k])=>{g(id).value=wmSettings[k]});
   wmUpdateLabels();
 }
