@@ -192,11 +192,11 @@ input[type=range]{padding:0;border:0;background:transparent}
           <div class="form-row">
             <div class="field"><label>Text colour</label><input id="wmColor" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
             <div class="field"><label>Mark &amp; small-line colour</label><input id="wmAccent" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
-            <div class="field"><label>Band colour</label><input id="wmBand" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
+            <div class="field" style="display:none"><label>Band colour</label><input id="wmBand" type="color" oninput="wmSchedulePreview()" style="padding:2px;height:44px"></div>
           </div>
-          <div class="field"><label>Opacity: <span id="wmOpacityVal"></span></label><input id="wmOpacity" type="range" min="0.2" max="1" step="0.05" oninput="wmSchedulePreview()"></div>
+          <div class="field"><label>Opacity: <span id="wmOpacityVal"></span></label><input id="wmOpacity" type="range" min="0.1" max="1" step="0.05" oninput="wmSchedulePreview()"></div>
           <div class="field"><label>Position (below the photo)</label>
-            <select id="wmPosition" onchange="wmSchedulePreview()"><option value="center">Centre</option><option value="left">Left</option><option value="right">Right</option></select></div>
+            <select id="wmPosition" onchange="wmSchedulePreview()"><option value="right">Bottom right</option><option value="bottom">Bottom centre</option><option value="left">Bottom left</option><option value="center">Middle of photo</option></select></div>
         </div>
         <div>
           <label style="font-size:13px;font-weight:600;color:var(--muted)">Live preview</label>
@@ -934,7 +934,7 @@ function variantSummary(value){
 // always rendered from the original, a watermark can never be applied twice, can be removed
 // instantly (original is still there), and can be regenerated whenever the design changes.
 // =====================================================================
-const WM_DEFAULTS={enabled:true,text:"ROMILUXE NG",font:"Montserrat",size:40,color:"#2c2620",opacity:1,position:"center",band_color:"#ffffff",letter_spacing:14,show_icon:true,tagline:"JEWELLERY · ACCESSORIES",accent_color:"#b8975a"};
+const WM_DEFAULTS={enabled:true,text:"ROMILUXE NG",font:"Montserrat",size:44,color:"#ffffff",opacity:0.8,position:"right",band_color:"#ffffff",letter_spacing:5,show_icon:true,tagline:"JEWELLERY · ACCESSORIES",accent_color:"#ffffff"};
 const WM_FONTS=["Montserrat","Cormorant Garamond","Playfair Display","Cinzel","Bodoni Moda"];
 let wmSettings={...WM_DEFAULTS};
 const wmMap=new Map(); // original_url -> {watermarked_url, excluded, settings_hash}
@@ -944,7 +944,7 @@ let wmFailedList=[];
 const SB_HEAD=(extra)=>({"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,...(extra||{})});
 
 function wmHash(s){
-  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,s.show_icon?1:0,s.tagline||"",s.accent_color,"v2"].join("|");
+  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,s.show_icon?1:0,s.tagline||"",s.accent_color,"v3"].join("|");
   let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;
   return h.toString(36);
 }
@@ -983,8 +983,8 @@ async function wmLoadFont(font){
 const WM_BAG_BODY=new Path2D("M6.5 11h19l1.4 15.2a1.2 1.2 0 0 1-1.2 1.3H6.3a1.2 1.2 0 0 1-1.2-1.3L6.5 11z");
 const WM_BAG_HANDLE=new Path2D("M11 14.5V9.5a5 5 0 0 1 10 0v5");
 function wmDraw(ctx,src,s,S){
-  const band=Math.round(S*0.14),ph=S-band;
-  ctx.fillStyle=s.band_color;ctx.fillRect(0,0,S,S);
+  const ph=S;
+  ctx.fillStyle="#f3eee6";ctx.fillRect(0,0,S,S);
   ctx.save();ctx.beginPath();ctx.rect(0,0,S,ph);ctx.clip();
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
   ctx.fillStyle="#f3eee6";ctx.fillRect(0,0,S,ph);
@@ -998,48 +998,56 @@ function wmDraw(ctx,src,s,S){
     ctx.save();ctx.translate((S-w)/2,(ph-h)/2);src.draw(ctx,w,h);ctx.restore();
   }
   ctx.restore();
-  // hairline between photo and band
-  ctx.fillStyle="rgba(184,151,90,0.35)";ctx.fillRect(0,ph,S,Math.max(1,Math.round(S*0.0015)));
-  const text=String(s.text||"").trim(),tag=String(s.tagline||"").trim();
-  if(!text&&!tag&&!s.show_icon)return;
+  // watermark overlay: stacked mark (bag, name, tagline) placed ON the photo
+  const text=String(s.text||"").trim(),tag=String(s.tagline||"").trim(),hasIcon=!!s.show_icon,hasTag=!!tag;
+  if(!text&&!tag&&!hasIcon)return;
   const wt=s.font==="Montserrat"?500:600;
   const family=`"${s.font}", "Montserrat", Arial, sans-serif`;
-  const pad=S*0.05,maxW=S-2*pad;
-  let px=Math.min(s.size*S/1000,band*0.34),sp=s.letter_spacing*S/1000;
-  const hasTag=!!tag,hasIcon=!!s.show_icon;
-  const gap=px*0.7;
-  const measureText=(t,p,sps)=>{ctx.font=`${wt} ${p}px ${family}`;let w=0;for(const ch of t)w+=ctx.measureText(ch).width;return w+sps*Math.max(0,[...t].length-1)};
-  let iconSize=px*1.35;
-  const lineW=()=>(hasIcon?iconSize+gap:0)+(text?measureText(text,px,sp):0);
-  let total=lineW();
-  if(total>maxW){const f=maxW/total;px*=f;sp*=f;iconSize*=f;total=lineW()}
-  let tpx=Math.max(S*0.0095,px*0.36),tsp=tpx*0.42;
-  let tagW=hasTag?measureText(tag,tpx,tsp):0;
-  if(tagW>maxW){const f=maxW/tagW;tpx*=f;tsp*=f;tagW=measureText(tag,tpx,tsp)}
-  const blockH=px*1.35+(hasTag?tpx*1.6:0);
-  const top=ph+(band-blockH)/2;
-  const line1Y=top+px*0.68,line2Y=top+px*1.35+tpx*0.9;
-  const startX=w=>s.position==="left"?pad:s.position==="right"?S-pad-w:(S-w)/2;
+  const pad=S*0.05,maxW=S*(s.position==="center"?0.8:0.5);
+  const mt=(t,p,sps)=>{ctx.font=`${wt} ${p}px ${family}`;let w=0;for(const ch of t)w+=ctx.measureText(ch).width;return w+sps*Math.max(0,[...t].length-1)};
+  let px=s.size*S/1000,sp=s.letter_spacing*S/1000;
+  const layout=()=>{
+    const icon=hasIcon?px*1.5:0,tpx=Math.max(S*0.011,px*0.34),tsp=tpx*0.35,rule=px*0.7;
+    const nameW=text?mt(text,px,sp):0,tagW=hasTag?mt(tag,tpx,tsp):0;
+    const tagBlockW=hasTag?tagW+(text?2*(rule+tpx*0.7):0):0;
+    const w=Math.max(nameW,tagBlockW,icon);
+    const g=px*0.22;
+    const h=icon+(icon&&text?g:0)+(text?px:0)+(hasTag?(text||icon?g*1.1:0)+tpx:0);
+    return{icon,tpx,tsp,rule,nameW,tagW,w,h,g};
+  };
+  let L=layout();
+  if(L.w>maxW){const f=maxW/L.w;px*=f;sp*=f;L=layout()}
+  const pos=s.position;
+  const cx=pos==="left"?pad+L.w/2:pos==="center"||pos==="bottom"?S/2:S-pad-L.w/2;
+  const top=pos==="center"?(S-L.h)/2:S-pad-L.h;
   ctx.save();
   ctx.globalAlpha=Math.max(0,Math.min(1,Number(s.opacity)));
+  ctx.shadowColor="rgba(0,0,0,0.45)";ctx.shadowBlur=S*0.006;ctx.shadowOffsetY=S*0.0008;
   ctx.textBaseline="middle";ctx.textAlign="left";
-  let x=startX(total);
-  if(hasIcon){
-    ctx.save();ctx.translate(x,line1Y-iconSize/2);const k=iconSize/32;ctx.scale(k,k);
-    ctx.strokeStyle=s.accent_color;ctx.lineWidth=1.7;ctx.lineJoin="round";ctx.lineCap="round";
+  let y=top;
+  if(L.icon){
+    ctx.save();ctx.translate(cx-L.icon/2,y);const k=L.icon/32;ctx.scale(k,k);
+    ctx.strokeStyle=s.accent_color;ctx.lineWidth=1.5;ctx.lineJoin="round";ctx.lineCap="round";
     ctx.stroke(WM_BAG_BODY);ctx.stroke(WM_BAG_HANDLE);ctx.restore();
-    x+=iconSize+gap;
+    y+=L.icon+(text?L.g:0);
   }
   if(text){
     ctx.fillStyle=s.color;ctx.font=`${wt} ${px}px ${family}`;
-    for(const ch of text){ctx.fillText(ch,x,line1Y);x+=ctx.measureText(ch).width+sp}
-  }
+    let x=cx-L.nameW/2;
+    for(const ch of text){ctx.fillText(ch,x,y+px/2);x+=ctx.measureText(ch).width+sp}
+    y+=px+(hasTag?L.g*1.1:0);
+  }else if(L.icon&&hasTag)y+=L.g*0.1;
   if(hasTag){
-    let tx=startX(tagW);
-    if(s.position==="center"&&hasIcon&&text)tx=startX(total)+(hasIcon?iconSize+gap:0)+((text?measureText(text,px,sp):0)-tagW)/2;
-    if(s.position==="center"&&!(hasIcon&&text))tx=startX(tagW);
-    ctx.fillStyle=s.accent_color;ctx.font=`500 ${tpx}px ${family}`;
-    for(const ch of tag){ctx.fillText(ch,tx,line2Y);tx+=ctx.measureText(ch).width+tsp}
+    const ty=y+L.tpx/2;
+    ctx.fillStyle=s.accent_color;ctx.font=`${wt} ${L.tpx}px ${family}`;
+    let x=cx-L.tagW/2;
+    for(const ch of tag){ctx.fillText(ch,x,ty);x+=ctx.measureText(ch).width+L.tsp}
+    if(text){
+      ctx.strokeStyle=s.accent_color;ctx.lineWidth=Math.max(1,S*0.0012);
+      const gx=L.tpx*0.7;
+      ctx.beginPath();ctx.moveTo(cx-L.tagW/2-gx-L.rule,ty);ctx.lineTo(cx-L.tagW/2-gx,ty);
+      ctx.moveTo(cx+L.tagW/2+gx,ty);ctx.lineTo(cx+L.tagW/2+gx+L.rule,ty);ctx.stroke();
+    }
   }
   ctx.restore();
 }
