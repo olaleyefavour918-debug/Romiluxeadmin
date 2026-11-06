@@ -944,7 +944,7 @@ let wmFailedList=[];
 const SB_HEAD=(extra)=>({"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,...(extra||{})});
 
 function wmHash(s){
-  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,s.show_icon?1:0,s.tagline||"",s.accent_color,"v3"].join("|");
+  const str=[s.text,s.font,s.size,s.color,s.opacity,s.position,s.band_color,s.letter_spacing,s.show_icon?1:0,s.tagline||"",s.accent_color,"v4"].join("|");
   let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;
   return h.toString(36);
 }
@@ -1020,30 +1020,38 @@ function wmDraw(ctx,src,s,S){
   const pos=s.position;
   const cx=pos==="left"?pad+L.w/2:pos==="center"||pos==="bottom"?S/2:S-pad-L.w/2;
   const top=pos==="center"?(S-L.h)/2:S-pad-L.h;
+  // auto-contrast: on a light/white area use a dark mark so it never disappears
+  let mainCol=s.color,accCol=s.accent_color,shCol="rgba(0,0,0,0.45)";
+  try{
+    const rx=Math.max(0,Math.floor(cx-L.w/2)),ry=Math.max(0,Math.floor(top)),rw=Math.min(S-rx,Math.ceil(L.w)),rh=Math.min(S-ry,Math.ceil(L.h));
+    const d=ctx.getImageData(rx,ry,rw,rh).data;let sum=0,n=0;
+    for(let i=0;i<d.length;i+=16){sum+=0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2];n++}
+    if(n&&sum/n>165){mainCol="#2c2620";accCol="#8a6d3b";shCol="rgba(255,255,255,0.55)"}
+  }catch(e){}
   ctx.save();
   ctx.globalAlpha=Math.max(0,Math.min(1,Number(s.opacity)));
-  ctx.shadowColor="rgba(0,0,0,0.45)";ctx.shadowBlur=S*0.006;ctx.shadowOffsetY=S*0.0008;
+  ctx.shadowColor=shCol;ctx.shadowBlur=S*0.006;ctx.shadowOffsetY=S*0.0008;
   ctx.textBaseline="middle";ctx.textAlign="left";
   let y=top;
   if(L.icon){
     ctx.save();ctx.translate(cx-L.icon/2,y);const k=L.icon/32;ctx.scale(k,k);
-    ctx.strokeStyle=s.accent_color;ctx.lineWidth=1.5;ctx.lineJoin="round";ctx.lineCap="round";
+    ctx.strokeStyle=accCol;ctx.lineWidth=1.5;ctx.lineJoin="round";ctx.lineCap="round";
     ctx.stroke(WM_BAG_BODY);ctx.stroke(WM_BAG_HANDLE);ctx.restore();
     y+=L.icon+(text?L.g:0);
   }
   if(text){
-    ctx.fillStyle=s.color;ctx.font=`${wt} ${px}px ${family}`;
+    ctx.fillStyle=mainCol;ctx.font=`${wt} ${px}px ${family}`;
     let x=cx-L.nameW/2;
     for(const ch of text){ctx.fillText(ch,x,y+px/2);x+=ctx.measureText(ch).width+sp}
     y+=px+(hasTag?L.g*1.1:0);
   }else if(L.icon&&hasTag)y+=L.g*0.1;
   if(hasTag){
     const ty=y+L.tpx/2;
-    ctx.fillStyle=s.accent_color;ctx.font=`${wt} ${L.tpx}px ${family}`;
+    ctx.fillStyle=accCol;ctx.font=`${wt} ${L.tpx}px ${family}`;
     let x=cx-L.tagW/2;
     for(const ch of tag){ctx.fillText(ch,x,ty);x+=ctx.measureText(ch).width+L.tsp}
     if(text){
-      ctx.strokeStyle=s.accent_color;ctx.lineWidth=Math.max(1,S*0.0012);
+      ctx.strokeStyle=accCol;ctx.lineWidth=Math.max(1,S*0.0012);
       const gx=L.tpx*0.7;
       ctx.beginPath();ctx.moveTo(cx-L.tagW/2-gx-L.rule,ty);ctx.lineTo(cx-L.tagW/2-gx,ty);
       ctx.moveTo(cx+L.tagW/2+gx,ty);ctx.lineTo(cx+L.tagW/2+gx+L.rule,ty);ctx.stroke();
