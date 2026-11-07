@@ -120,8 +120,13 @@ input[type=range]{padding:0;border:0;background:transparent}
       </div>
       <div class="field"><label>Product Name</label><input id="pName" oninput="updateMixGroupHint()" placeholder="e.g. Gold Chain Necklace"></div>
       <div class="form-row">
-        <div class="field"><label id="priceLabel">Price (₦)</label><input id="pPrice" oninput="updateMixGroupHint()" type="number" placeholder="1500"></div>
+        <div class="field"><label id="priceLabel">Price (₦)</label><input id="pPrice" oninput="updateMixGroupHint();syncSoldBy(false)" type="number" placeholder="1500"></div>
         <div class="field"><label>Unit</label><input id="pUnit" placeholder="piece / pack / dozen"><p class="sub" id="unitHint" style="margin-top:4px"></p></div>
+      </div>
+      <div class="form-row" id="soldByRow" style="display:none">
+        <div class="field"><label>Wholesale sold by</label>
+          <select id="pSoldBy" onchange="syncSoldBy(true)"><option value="dozen">Dozen (12 pieces)</option><option value="piece">Piece (1 piece)</option><option value="pack">Pack</option><option value="box">Box</option><option value="set">Set</option><option value="carton">Carton</option><option value="bundle">Bundle</option><option value="roll">Roll</option></select></div>
+        <div class="field"><label>Pieces in one <span id="soldByName">dozen</span></label><input id="pPackSize" type="number" min="1" step="1" value="12" inputmode="numeric" oninput="syncSoldBy(false)"><p class="sub" id="packHint" style="margin-top:4px"></p></div>
       </div>
       <div class="form-row" id="wholesaleFields" style="display:none">
         <div class="field"><label>Minimum Order Qty</label><input id="pMoq" type="number" value="6" min="1" step="1" inputmode="numeric" oninput="updateMixGroupHint()"><p class="sub" id="moqHint" style="margin-top:4px">Retail items are bought one at a time.</p><div id="moqChips" style="display:none;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>
@@ -152,7 +157,7 @@ input[type=range]{padding:0;border:0;background:transparent}
 
             <div class="field" id="itemKindField" style="margin-top:14px;display:none"><label>Type of item (used for the website filter and Mix &amp; Match)</label>
         <div>
-          <select id="mixType" onchange="updateMixGroupHint()"><option value="">Auto (from the product name)</option><option value="necklace">Necklace</option><option value="bracelet">Bracelet</option><option value="bangle">Bangle</option><option value="nosering">Nose ring</option><option value="earring">Earring</option><option value="legchain">Leg chain</option><option value="waistchain">Waist chain</option><option value="watch">Wristwatch</option><option value="beads">Beads</option><option value="costume">Costume</option><option value="other">Other</option></select>
+          <select id="mixType" onchange="updateMixGroupHint()"><option value="">Auto (from the product name)</option><option value="necklace">Necklace</option><option value="bracelet">Bracelet</option><option value="bangle">Bangle</option><option value="nosering">Nose ring</option><option value="earring">Earring</option><option value="legchain">Leg chain</option><option value="waistchain">Waist chain</option><option value="watch">Wristwatch</option><option value="beads">Beads</option><option value="costume">Costume</option><option value="packaging">Packaging materials</option><option value="props">Props</option><option value="other">Other</option></select>
           <div id="mixGroupHint" class="sub" style="margin-top:6px"></div>
         </div>
       </div>
@@ -488,6 +493,8 @@ const CATEGORY_LABELS={retail:"Retail",wholesale:"Wholesale",perfume:"Perfume",c
 function categoryLabel(c){return CATEGORY_LABELS[c]||"Retail"}
 function mixDetectAdmin(name){
   const s=String(name||"").toLowerCase();
+  if(/packag|gift\s*box|jewell?ery\s*box|pouch|ribbon|bubble\s*wrap|\bbox(es)?\b|carton/.test(s))return"packaging";
+  if(/\bprops?\b|display|\bstand\b|mannequin|\bbust\b|\btray\b|\bholder\b/.test(s))return"props";
   if(/necklace|choker|pendant/.test(s))return"necklace";
   if(/bangle/.test(s))return"bangle";
   if(/bracelet|cuff/.test(s))return"bracelet";
@@ -504,16 +511,26 @@ function updateMixGroupHint(){
   const h=document.getElementById("mixGroupHint");if(!h)return;
   const kind=document.getElementById("mixType").value||mixDetectAdmin(document.getElementById("pName").value);
   const price=document.getElementById("pPrice").value;
-  const lab={necklace:"Necklace",bracelet:"Bracelet",bangle:"Bangle",nosering:"Nose ring",earring:"Earring",legchain:"Leg chain",waistchain:"Waist chain",watch:"Wristwatch",beads:"Beads",costume:"Costume",other:"Other"}[kind]||kind;
+  const lab={necklace:"Necklace",bracelet:"Bracelet",bangle:"Bangle",nosering:"Nose ring",earring:"Earring",legchain:"Leg chain",waistchain:"Waist chain",watch:"Wristwatch",beads:"Beads",costume:"Costume",packaging:"Packaging materials",props:"Props",other:"Other"}[kind]||kind;
   const wh=document.getElementById("pCategory").value==="wholesale";
   h.textContent="Shows under the \""+lab+"\" filter"+(wh?"; Mix & Match only with other "+lab.toLowerCase()+" items"+(price?" at ₦"+Number(price).toLocaleString():" at the same price")+" with the same minimum ("+(document.getElementById("pMoq").value||6)+" pieces).":".");
+}
+function syncSoldBy(fromSelect){
+  const sel=document.getElementById("pSoldBy"),pk=document.getElementById("pPackSize"),u=sel.value;
+  if(fromSelect){if(u==="dozen")pk.value=12;else if(u==="piece")pk.value=1;else if(Number(pk.value)===12||Number(pk.value)===1)pk.value=u==="pack"?6:10}
+  pk.readOnly=(u==="dozen"||u==="piece");
+  document.getElementById("soldByName").textContent=u;
+  const n=Math.max(1,Math.floor(Number(pk.value))||1),price=Number(document.getElementById("pPrice").value);
+  document.getElementById("packHint").textContent=price?("Price is for one "+u+" ("+n+" piece"+(n>1?"s":"")+") = ₦"+(Math.round(price/n*100)/100).toLocaleString()+" per piece."):"The price you enter is for one "+u+".";
+  const unit=document.getElementById("pUnit");if(unit&&document.getElementById("pCategory").value==="wholesale"){unit.value=u}
+  const hint=document.getElementById("unitHint");if(hint&&document.getElementById("pCategory").value==="wholesale")hint.textContent="Wholesale price is per "+u+" ("+n+" piece"+(n>1?"s":"")+"). Customers must order at least the minimum below.";
 }
 function toggleWholesaleFields(){
   const wholesale=document.getElementById("pCategory").value==="wholesale";
   document.getElementById("wholesaleFields").style.display=wholesale?"grid":"none";
   const unit=document.getElementById("pUnit"),hint=document.getElementById("unitHint"),moq=document.getElementById("pMoq");
-  if(wholesale){unit.value="dozen";unit.readOnly=true;hint.textContent="Wholesale price is per dozen (12 pieces). Customers must order at least the minimum below.";if(moq.dataset.mode!=="w"){moq.value=(Number(moq.value)>1?moq.value:6)}moq.dataset.mode="w";moq.readOnly=false;moq.disabled=false;document.getElementById("moqHint").textContent="Minimum pieces a customer must order of this product (e.g. 6, 12, 24). Mix & Match only combines items with the same kind, price and minimum.";const ch=document.getElementById("moqChips");ch.style.display="flex";ch.innerHTML=[6,12,24,36,48,60].map(n=>`<button type="button" class="btn-sm" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);cursor:pointer" onclick="document.getElementById('pMoq').value=${n};updateMixGroupHint()">${n}</button>`).join("")}
-  else{unit.readOnly=false;hint.textContent="Use piece for normal retail items.";moq.value=1;moq.dataset.mode="";moq.readOnly=true;document.getElementById("moqHint").textContent="Retail items are bought one at a time.";document.getElementById("moqChips").style.display="none"}
+  if(wholesale){unit.readOnly=true;document.getElementById("soldByRow").style.display="grid";syncSoldBy(false);if(moq.dataset.mode!=="w"){moq.value=(Number(moq.value)>1?moq.value:6)}moq.dataset.mode="w";moq.readOnly=false;moq.disabled=false;document.getElementById("moqHint").textContent="Minimum pieces a customer must order of this product (e.g. 6, 12, 24). Mix & Match only combines items with the same kind, price and minimum.";const ch=document.getElementById("moqChips");ch.style.display="flex";ch.innerHTML=[6,12,24,36,48,60].map(n=>`<button type="button" class="btn-sm" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);cursor:pointer" onclick="document.getElementById('pMoq').value=${n};updateMixGroupHint()">${n}</button>`).join("")}
+  else{document.getElementById("soldByRow").style.display="none";unit.readOnly=false;hint.textContent="Use piece for normal retail items.";moq.value=1;moq.dataset.mode="";moq.readOnly=true;document.getElementById("moqHint").textContent="Retail items are bought one at a time.";document.getElementById("moqChips").style.display="none"}
   const mixSetting=document.getElementById("mixMatchSetting");
   if(mixSetting)mixSetting.style.display=wholesale?"block":"none";
   const kindField=document.getElementById("itemKindField");if(kindField){const c=document.getElementById("pCategory").value;kindField.style.display=(c==="retail"||c==="wholesale")?"block":"none"}
@@ -754,7 +771,7 @@ function resetProductForm(){
   document.getElementById("variantType").value="color";
   document.getElementById("variantColorName").value="";
   document.getElementById("variantColorImage").value="";
-  const mixBox=document.getElementById("allowMixMatch");if(mixBox)mixBox.checked=false;const mixTypeReset=document.getElementById("mixType");if(mixTypeReset)mixTypeReset.value="";
+  const mixBox=document.getElementById("allowMixMatch");if(mixBox)mixBox.checked=false;const sbR=document.getElementById("pSoldBy");if(sbR){sbR.value="dozen";document.getElementById("pPackSize").value=12}const mixTypeReset=document.getElementById("mixType");if(mixTypeReset)mixTypeReset.value="";
   updateVariantMode();
   document.getElementById("currentCoverPreview").innerHTML="";
   document.getElementById("coverWmCtl").innerHTML="";
@@ -778,6 +795,7 @@ function startEditProduct(p){
   document.getElementById("pName").value=p.name||"";
   document.getElementById("pPrice").value=p.price||"";
   document.getElementById("pUnit").value=p.unit||"";
+  {const u=String(p.unit||"dozen").toLowerCase();const sb=document.getElementById("pSoldBy");sb.value=[...sb.options].some(o=>o.value===u)?u:"pack";document.getElementById("pPackSize").value=u==="piece"?1:(u==="dozen"?12:12);window.__editUnit=u}
   document.getElementById("pMoq").dataset.mode=(p.category==="wholesale"?"w":"");
   document.getElementById("pMoq").value=p.moq||(p.category==="wholesale"?6:1);
   document.getElementById("pContents").value=p.contents||"";
@@ -797,7 +815,7 @@ function startEditProduct(p){
     try{
       const parsed=typeof p.color_variants==="string"?JSON.parse(p.color_variants):p.color_variants;
       const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.variants)?parsed.variants:[]);
-      savedMixMatch=!!parsed?.meta?.mixMatch;savedMixType=String(parsed?.meta?.mixType||"");
+      savedMixMatch=!!parsed?.meta?.mixMatch;savedMixType=String(parsed?.meta?.mixType||"");{const ps=Math.floor(Number(parsed?.meta?.packSize));if(ps>=1)document.getElementById("pPackSize").value=ps}
       arr.forEach(v=>pendingVariants.push({type:v.type==="design"?"design":"color",color:v.color,design:v.design,existingUrl:v.image,previewUrl:v.image}));
     }catch(e){}
   }
@@ -832,7 +850,8 @@ async function saveProduct(){
   const name=document.getElementById("pName").value.trim();
   const price=document.getElementById("pPrice").value;
   const isWholesale=category==="wholesale";
-  const unit=isWholesale?"dozen":(document.getElementById("pUnit").value.trim()||"piece");
+  const soldBy=document.getElementById("pSoldBy").value,packSize=Math.max(1,Math.floor(Number(document.getElementById("pPackSize").value))||1);
+  const unit=isWholesale?soldBy:(document.getElementById("pUnit").value.trim()||"piece");
   const moq=isWholesale?Math.floor(Number(document.getElementById("pMoq").value)):1;
   if(isWholesale&&!(moq>=1)){alert("Please enter a minimum order quantity of 1 or more pieces.");return}
   const contents=document.getElementById("pContents").value.trim();
@@ -901,8 +920,8 @@ async function saveProduct(){
       contents:category==="wholesale"?contents:null,
       sizes:sizes||null,
       description:description||null,
-      color_variants:(isWholesale && !/fake\s*piercing\s*sticker/i.test(name))
-        ?JSON.stringify({meta:{mixMatch:true,mixType:(document.getElementById("mixType").value||mixDetectAdmin(name))},variants:colorVariants})
+      color_variants:isWholesale
+        ?JSON.stringify({meta:{mixMatch:!/fake\s*piercing\s*sticker/i.test(name),mixType:(document.getElementById("mixType").value||mixDetectAdmin(name)),packSize},variants:colorVariants})
         :((document.getElementById("mixType").value&&!isWholesale)?JSON.stringify({meta:{mixType:document.getElementById("mixType").value},variants:colorVariants}):(colorVariants.length?JSON.stringify(colorVariants):null)),
       image_url:imageUrl
     };
@@ -1579,6 +1598,6 @@ async function deleteProductForever(id,btn){
 }
 
 </script>
-<div id="adminVersion" style="position:fixed;right:10px;bottom:6px;font-size:11px;color:#999;pointer-events:none;z-index:5">Admin v2026-11-07 · per-product MOQ</div>
+<div id="adminVersion" style="position:fixed;right:10px;bottom:6px;font-size:11px;color:#999;pointer-events:none;z-index:5">Admin v2026-11-07b · units, MOQ, kinds</div>
 </body>
 </html>
