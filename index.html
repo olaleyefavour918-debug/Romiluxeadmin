@@ -150,16 +150,19 @@ input[type=range]{padding:0;border:0;background:transparent}
         <div id="variantPreviewList" style="margin-top:10px"></div>
       </div>
 
+            <div class="field" id="itemKindField" style="margin-top:14px;display:none"><label>Type of item (used for the website filter and Mix &amp; Match)</label>
+        <div>
+          <select id="mixType" onchange="updateMixGroupHint()"><option value="">Auto (from the product name)</option><option value="necklace">Necklace</option><option value="bracelet">Bracelet</option><option value="bangle">Bangle</option><option value="nosering">Nose ring</option><option value="earring">Earring</option><option value="legchain">Leg chain</option><option value="waistchain">Waist chain</option><option value="watch">Wristwatch</option><option value="beads">Beads</option><option value="costume">Costume</option><option value="other">Other</option></select>
+          <div id="mixGroupHint" class="sub" style="margin-top:6px"></div>
+        </div>
+      </div>
+
       <div class="field" id="mixMatchSetting" style="margin-top:14px;display:none">
         <label>Wholesale Mix & Match</label>
         <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:pointer">
           <input id="allowMixMatch" type="checkbox" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto">
           <span><b>Allow Mix & Match for this product</b><br><span class="sub">Customers will see an Add to Cart button first. After opening the product, they can also use Mix & Match to combine designs with other enabled products of the same kind at the same wholesale price.</span></span>
         </label>
-        <div style="margin-top:10px"><label style="font-size:13px;font-weight:600">What kind of item is this? <span class="sub" style="font-weight:400">(Mix &amp; Match only combines the same kind at the same price)</span></label>
-          <select id="mixType" onchange="updateMixGroupHint()"><option value="">Auto (from the product name)</option><option value="necklace">Necklace</option><option value="bracelet">Bracelet</option><option value="earring">Earring</option><option value="ring">Ring</option><option value="anklet">Anklet</option><option value="watch">Watch</option><option value="chain">Chain</option><option value="set">Jewellery set</option><option value="other">Other</option></select>
-          <div id="mixGroupHint" class="sub" style="margin-top:6px"></div>
-        </div>
       </div>
 
       <div class="field" style="margin-top:14px">
@@ -486,20 +489,24 @@ function categoryLabel(c){return CATEGORY_LABELS[c]||"Retail"}
 function mixDetectAdmin(name){
   const s=String(name||"").toLowerCase();
   if(/necklace|choker|pendant/.test(s))return"necklace";
-  if(/bracelet|bangle|cuff/.test(s))return"bracelet";
-  if(/anklet/.test(s))return"anklet";
+  if(/bangle/.test(s))return"bangle";
+  if(/bracelet|cuff/.test(s))return"bracelet";
+  if(/nose\s*-?(ring|pin|stud)/.test(s))return"nosering";
   if(/earring|hoop|stud/.test(s))return"earring";
-  if(/\bring/.test(s))return"ring";
+  if(/leg\s*-?chain|anklet/.test(s))return"legchain";
+  if(/waist\s*-?chain|belly\s*-?chain/.test(s))return"waistchain";
   if(/watch/.test(s))return"watch";
-  if(/chain/.test(s))return"chain";
-  if(/\bset\b/.test(s))return"set";
+  if(/bead/.test(s))return"beads";
+  if(/costume/.test(s))return"costume";
   return"other";
 }
 function updateMixGroupHint(){
   const h=document.getElementById("mixGroupHint");if(!h)return;
   const kind=document.getElementById("mixType").value||mixDetectAdmin(document.getElementById("pName").value);
   const price=document.getElementById("pPrice").value;
-  h.textContent="Mixes with: other "+kind+"s"+(price?" priced at ₦"+Number(price).toLocaleString():" at the same price")+" only.";
+  const lab={necklace:"Necklace",bracelet:"Bracelet",bangle:"Bangle",nosering:"Nose ring",earring:"Earring",legchain:"Leg chain",waistchain:"Waist chain",watch:"Wristwatch",beads:"Beads",costume:"Costume",other:"Other"}[kind]||kind;
+  const wh=document.getElementById("pCategory").value==="wholesale";
+  h.textContent="Shows under the \""+lab+"\" filter"+(wh?"; Mix & Match only with other "+lab.toLowerCase()+" items"+(price?" at ₦"+Number(price).toLocaleString():" at the same price")+".":".");
 }
 function toggleWholesaleFields(){
   const wholesale=document.getElementById("pCategory").value==="wholesale";
@@ -509,6 +516,7 @@ function toggleWholesaleFields(){
   else{unit.readOnly=false;hint.textContent="Use piece for normal retail items.";moq.value=1}
   const mixSetting=document.getElementById("mixMatchSetting");
   if(mixSetting)mixSetting.style.display=wholesale?"block":"none";
+  const kindField=document.getElementById("itemKindField");if(kindField){const c=document.getElementById("pCategory").value;kindField.style.display=(c==="retail"||c==="wholesale")?"block":"none"}
   updateMixGroupHint();
   const mixBox=document.getElementById("allowMixMatch");
   if(mixBox){
@@ -893,7 +901,7 @@ async function saveProduct(){
       description:description||null,
       color_variants:(isWholesale && !/fake\s*piercing\s*sticker/i.test(name))
         ?JSON.stringify({meta:{mixMatch:true,mixType:(document.getElementById("mixType").value||mixDetectAdmin(name))},variants:colorVariants})
-        :(colorVariants.length?JSON.stringify(colorVariants):null),
+        :((document.getElementById("mixType").value&&!isWholesale)?JSON.stringify({meta:{mixType:document.getElementById("mixType").value},variants:colorVariants}):(colorVariants.length?JSON.stringify(colorVariants):null)),
       image_url:imageUrl
     };
 
